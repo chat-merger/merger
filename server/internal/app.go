@@ -13,14 +13,17 @@ import (
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
+
+	"github.com/chat-merger/merger/server/internal/callback"
+	"github.com/chat-merger/merger/server/internal/handlers"
 )
 
 type App struct {
-	ConfigPath string
-	cfg        *Config
-	cbApi      callbackAPI
-	db         *gorm.DB
-	redis      *redis.Client
+	ConfigPath  string
+	cfg         *Config
+	callbackApi callback.API
+	db          *gorm.DB
+	redis       *redis.Client
 }
 
 type Config struct {
@@ -51,7 +54,7 @@ func (a *App) Start(c *cli.Context) (err error) {
 
 func startAndListenServer(app *App) error {
 	router := http.NewServeMux()
-	setup(router, app)
+	handlers.setup(router, app)
 
 	serv := http.Server{
 		Addr:    fmt.Sprintf(":%d", app.cfg.Port),

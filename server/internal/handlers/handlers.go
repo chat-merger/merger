@@ -1,7 +1,8 @@
-package internal
+package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -9,18 +10,16 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+
+	"github.com/chat-merger/merger/server/internal"
+	"github.com/chat-merger/merger/server/internal/event"
 )
 
-type File struct {
-	Bytes   []byte
-	Type    int
-	LocalID string
-}
 type Context struct {
-	app *App
+	app *internal.App
 }
 
-func setup(router *http.ServeMux, app *App) {
+func setup(router *http.ServeMux, app *internal.App) {
 	ctx := Context{app: app}
 	router.HandleFunc("GET /", wrap(ctx, handlerOk))
 	router.HandleFunc("POST /events/newMessage", wrap(ctx, handlerNewMessage))
@@ -55,59 +54,37 @@ func handlerOk(_ Context, _ *http.Request) (any, error) {
 	return text("OK")
 }
 
-type EventNewMsg struct {
-	LocalID      string
-	IsSilent     bool
-	ReplyLocalID string
-	Username     string
-	Text         string
-	Forwards     []EventNewMsgForward
-	Attachments  []EventNewMsgAttachment
-}
-
-type EventNewMsgForward struct {
-	LocalID     int
-	Username    string
-	Text        string
-	CreateDate  string
-	Attachments []EventNewMsgAttachment
-}
-
-type EventNewMsgAttachment struct {
-	LocalID    string
-	HasSpoiler bool
-	Type       int
-	// Общедоступная ссылка для загрузки файла.
-	// Если ссылка не передана и по такому FileID не найдено файлов, то клиент должен будет загрузить файлы на специальный эндпоинт
-	Url string
-}
-
-type EventNewMsgResponse struct {
-	ID                               int
-	RequireUploadAttachmentsLocalIDs []string
-}
-
 func handlerNewMessage(c Context, r *http.Request) (_ any, err error) {
+	var appID int
+	if appID, err = headerAppID(r); err != nil {
+		return nil, err
+	}
 	var b []byte
 	if _, err = r.Body.Read(b); err != nil {
 		return text("read body err: " + err.Error())
 	}
 
-	var newMsg EventNewMsg
-	if err = json.Unmarshal(b, &newMsg); err != nil {
+	var newMessage event.MessageNew
+	if err = json.Unmarshal(b, &newMessage); err != nil {
 		return nil, err
 	}
+	newMessage.AppID = appID
 
-	EventNewMessage(c.app, newMsg)
+	internal.EventNewMessage(c.app, newMessage)
 
 	return nil, nil
 }
 
 func handlerFilesUpload(c Context, r *http.Request) (_ any, err error) {
+	var appID int
+	if appID, err = headerAppID(r); err != nil {
+		return nil, err
+	}
 	if err = r.ParseMultipartForm(21 << 20); err != nil {
 		return nil, err
 	}
-	var file File
+
+	file := event.FileUpload{AppID: appID}
 
 	// MsgLID
 	if len(r.MultipartForm.Value["id"]) != 1 {
@@ -135,12 +112,12 @@ func handlerFilesUpload(c Context, r *http.Request) (_ any, err error) {
 		return text("Unable to read file")
 	}
 
-	FileUpload(c.app, file)
+	internal.FileUpload(c.app, file)
 
 	return text("ok")
 }
 
-func intFromQuery(r *http.Request, name string) (int, error) {
+func paramInt(r *http.Request, name string) (int, error) {
 	queryVal := r.URL.Query().Get(name)
 	if queryVal == "" {
 		return 0, nil
@@ -152,7 +129,7 @@ func intFromQuery(r *http.Request, name string) (int, error) {
 	}
 }
 
-func intsFromQuery(r *http.Request, name string) ([]int, error) {
+func paramIntSlice(r *http.Request, name string) ([]int, error) {
 	queryVal := r.URL.Query().Get(name)
 	if queryVal == "" {
 		return nil, nil
@@ -168,4 +145,20 @@ func intsFromQuery(r *http.Request, name string) ([]int, error) {
 	}
 
 	return result, nil
+}
+
+func headerAppID(r *http.Request) (int, error) {
+	valStr := r.Header.Get("X-App-Id")
+	if valStr == "" {
+		return 0, errors.New("missing X-App-Id")
+	}
+	id, err := strconv.Atoi(valStr)
+	if err != nil {
+		return 0, errors.New("X-App-Id must be integer")
+	}
+	if id == 0 {
+		return 0, errors.New("X-App-Id cannot be 0")
+	}
+
+	return id, nil
 }

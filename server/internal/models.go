@@ -7,7 +7,9 @@ type Application struct {
 	Host string `gorm:"column:host"`
 }
 
-func (*Application) TableName() string { return "Applications" }
+const TableApplications = "Applications"
+
+func (*Application) TableName() string { return TableApplications }
 
 func collectHosts(apps []Application) []string {
 	hosts := make([]string, len(apps))
@@ -31,10 +33,12 @@ type Message struct {
 
 type MessageExt struct {
 	Message
-	Attachments []Attachment
+	Attachments []*Attachment
 }
 
-func (*Message) TableName() string { return "Messages" }
+const TableMessages = "Messages"
+
+func (*Message) TableName() string { return TableMessages }
 
 type MessageMap struct {
 	AppID      int    `gorm:"column:appId"`
@@ -42,7 +46,9 @@ type MessageMap struct {
 	MsgLocalID string `gorm:"column:msgLocalID"`
 }
 
-func (*MessageMap) TableName() string { return "MessagesMap" }
+const TableMessagesMap = "MessagesMap"
+
+func (*MessageMap) TableName() string { return TableMessagesMap }
 
 type Attachment struct {
 	ID         int    `gorm:"column:id"`
@@ -51,11 +57,22 @@ type Attachment struct {
 	Url        string `gorm:"column:url"`
 	HasSpoiler bool   `gorm:"column:hasSpoiler"`
 	Type       int    `gorm:"column:type"`
-	FileName   string `gorm:"column:fileName"`
-	Confirmed  bool   `gorm:"column:confirmed"`
+	//FileName   string `gorm:"column:fileName"`
+	//Confirmed  bool   `gorm:"column:confirmed"`
 }
 
-func (*Attachment) TableName() string { return "Attachments" }
+func CollectAttachmentID(attachments []*Attachment) []int {
+	result := make([]int, len(attachments))
+	for i, fwd := range attachments {
+		result[i] = fwd.ID
+	}
+
+	return result
+}
+
+const TableAttachments = "Attachments"
+
+func (*Attachment) TableName() string { return TableAttachments }
 
 type AttachmentType int
 
@@ -67,10 +84,12 @@ const (
 	AtSticker = 5
 )
 
-//type Files struct {
-//	ID       int    `gorm:"column:id"`
-//	AppID    int    `gorm:"column:appId"`
-//	FileName string `gorm:"column:fileName"`
-//}
-//
-//func (*Files) TableName() string { return "Files" }
+type File struct {
+	ID           int    `gorm:"column:id"`
+	AttachmentID int    `gorm:"column:attachmentId"`
+	FileName     string `gorm:"column:fileName"`
+}
+
+const TableFiles = "Files"
+
+func (*File) TableName() string { return TableFiles }
