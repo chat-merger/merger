@@ -28,16 +28,17 @@ type Message struct {
 	CreateDate int `gorm:"column:createDate"`
 }
 
+type MessageExt struct {
+	Message
+	Attachments []Attachment
+}
+
 func (*Message) TableName() string { return "Messages" }
 
 type MessageMap struct {
 	AppID   int    `gorm:"column:appId"`
 	MsgID   int    `gorm:"column:msgId"`
 	InAppID string `gorm:"column:inAppId"`
-}
-
-func msgMapByAppID(msgID int) map[int]MessageMap {
-
 }
 
 func (*MessageMap) TableName() string { return "MessagesMap" }

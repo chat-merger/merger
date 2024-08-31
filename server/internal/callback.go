@@ -31,5 +31,5 @@ type callbackNewMsgAttachment struct {
 }
 
 type callbackAPI interface {
-	OnNewMsg(c map[string]callbackNewMsg) callbackNewMsgResponse
+	OnNewMsg(c map[int]callbackNewMsg) callbackNewMsgResponse
 }

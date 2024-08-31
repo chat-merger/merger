@@ -1,56 +1,44 @@
 package internal
 
 func EventNewMessage(a *App, e EventNewMsg) {
-	msg, attachs := SaveMsg(a, e)
-	replyByAppID := msgMapByAppID(msg.Reply)
+	msg, forwards := SaveMsg(a, e)
+	replyByAppID := MsgMapByAppID(msg.Reply)
 	callbackMsgMap := make(map[int]callbackNewMsg)
-	for i, app := range Apps(a) {
+	for _, app := range Apps(a) {
 		callbackMsgMap[app.ID] = callbackNewMsg{
-			ID:            msg.ID,
-			IsSilent:      e.IsSilent,
-			Reply:         msg.Reply,
-			ReplyInAppID:  replyByAppID[app.ID].InAppID,
-			Username:      e.Username,
-			Text:          e.Text,
-			Forwards:      ,
-			Attachments:   AttachmentToCbkAttach(attachs...),
+			ID:           msg.ID,
+			IsSilent:     e.IsSilent,
+			Reply:        msg.Reply,
+			ReplyInAppID: replyByAppID[app.ID].InAppID,
+			Username:     e.Username,
+			Text:         e.Text,
+			Forwards:     MessageExtToCbkForwards(forwards),
+			Attachments:  AttachmentToCbkAttachs(msg.Attachments),
 		}
-
 	}
 
-	a.cbApi.OnNewMsg(e, hosts)
-	for i, app := range hosts {
-
-	}
+	a.cbApi.OnNewMsg(callbackMsgMap)
 }
 
-func attachAppIDToID() {
+func FileUpload(a *App, f File) {}
 
-}
+func MessageExtToCbkForwards(exts []MessageExt) []callbackNewMsgForward {}
 
-//func Files(a *App,ids []int) []File {
-//
-//}
+func attachAppIDToID() {}
 
-func FileUpload(a *App, f File) {
-
-}
-
-func SaveMsg(a *App, e EventNewMsg) (Message, []Attachment, []Forward) {}
+func SaveMsg(a *App, e EventNewMsg) (MessageExt, []MessageExt) {}
 
 func Apps(a *App) []Application {}
 
 func IDByInApp(id string) int {}
 func InAppByID(id int) string {}
 
-func IDAttachByInApp(id string) int {}
-func InAppAttachByID(id int) string {}
+func IDAttachByInApp(id string) int       {}
+func InAppAttachByID(id int) string       {}
 func InAppAttachByIDs(ids []int) []string {}
 
-func AttachmentToCbkAttach(attachs Attachment) []callbackNewMsgAttachment {
+func AttachmentToCbkAttachs(attachs []Attachment) []callbackNewMsgAttachment {}
 
-}
+func AttachmentsFilter(attachs []Attachment, ids []int) []Attachment {}
 
-func AttachmentsFilter(attachs []Attachment, ids []int) []Attachment {
-
-}
+func MsgMapByAppID(msgID int) map[int]MessageMap {}

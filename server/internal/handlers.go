@@ -24,8 +24,6 @@ func setup(router *http.ServeMux, app *App) {
 	ctx := Context{app: app}
 	router.HandleFunc("GET /", wrap(ctx, handlerOk))
 	router.HandleFunc("POST /events/newMessage", wrap(ctx, handlerNewMessage))
-	// сохранить сообщение, реплай например
-	router.HandleFunc("POST /events/saveMessage", wrap(ctx, handlerSaveMessage))
 	router.HandleFunc("POST /files", wrap(ctx, handlerFilesUpload))
 }
 
@@ -66,7 +64,6 @@ type EventNewMsg struct {
 	AttachmentInAppIDs []string
 	Forwards           []EventNewMsgForward
 	Attachments        EventNewMsgAttachment
-	//Attachments        map[string]EventNewMsgAttachment
 }
 
 type EventNewMsgForward struct {
