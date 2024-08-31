@@ -115,7 +115,9 @@ func parseConfig(path string) (*Config, error) {
 	var (
 		err  error
 		file []byte
-		cfg  = &Config{}
+		cfg  = &struct {
+			Merger *Config `toml:"merger"`
+		}{}
 	)
 	if file, err = os.ReadFile(path); err != nil {
 		return nil, err
@@ -126,5 +128,5 @@ func parseConfig(path string) (*Config, error) {
 		return nil, err
 	}
 
-	return cfg, nil
+	return cfg.Merger, nil
 }

@@ -1,9 +1,9 @@
-# Server
+[merger]
 port = 43687
 db = "postgresql://postgres:postgrespassword@host.docker.internal:5432/postgres"
 redis = "rediss://connection_URI"
 
-# Telegram
+[telegram]
 merger_url = "localhost:123"
 mkey = "key"
 token = "token"

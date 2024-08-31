@@ -3,49 +3,28 @@ package internal
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"log/slog"
+	"mime/multipart"
 	"net/http"
 	"strconv"
+	"strings"
 )
 
-type Event interface{}
-type File interface{}
+type File struct {
+	Bytes   []byte
+	Type    int
+	InAppID string
+}
 type Context struct {
-	app  *App
-	repo Repo
+	app *App
 }
-
-type Repo interface {
-	EventFrom(id int) []Event
-	EventLast() Event
-	EventSend(Event)
-
-	File(id int) File
-	FileUpload(File)
-
-	Assoc(clientID string) int
-	AssocWrite(clientID string, mergerID int)
-}
-
-type emptyRepo struct{}
-
-func (_ emptyRepo) EventFrom(id int) []Event                 { return nil }
-func (_ emptyRepo) EventLast() Event                         { return nil }
-func (_ emptyRepo) EventSend(Event)                          {}
-func (_ emptyRepo) File(id int) File                         { return nil }
-func (_ emptyRepo) FileUpload(File)                          {}
-func (_ emptyRepo) Assoc(clientID string) int                { return 1 }
-func (_ emptyRepo) AssocWrite(clientID string, mergerID int) {}
 
 func setup(router *http.ServeMux, app *App) {
-	ctx := Context{app: app, repo: emptyRepo{}}
+	ctx := Context{app: app}
 	router.HandleFunc("GET /", wrap(ctx, handlerOk))
-	router.HandleFunc("GET /event", wrap(ctx, handlerEvent))
-	router.HandleFunc("POST /event", wrap(ctx, handlerEventSend))
-	router.HandleFunc("GET /file", wrap(ctx, handlerFile))
-	router.HandleFunc("POST /file", wrap(ctx, handlerFileUpload))
-	router.HandleFunc("GET /assoc", wrap(ctx, handlerAssoc))
-	router.HandleFunc("POST /assoc", wrap(ctx, handlerAssocWrite))
+	router.HandleFunc("POST /events/createMessage", wrap(ctx, handlerCreateMessage))
+	router.HandleFunc("POST /files", wrap(ctx, handlerFilesUpload))
 }
 
 func wrap(c Context, fn func(c Context, r *http.Request) (any, error)) func(http.ResponseWriter, *http.Request) {
@@ -76,31 +55,94 @@ func handlerOk(_ Context, _ *http.Request) (any, error) {
 	return text("OK")
 }
 
-func handlerEvent(c Context, r *http.Request) (_ any, err error) {
-	var last, from int
-	if last, err = intFromQury(r, "last"); err != nil {
-		return nil, err
-	}
-	if last != 0 {
-		return c.repo.EventLast(), nil
-	}
-
-	if from, err = intFromQury(r, "from"); err != nil {
-		return nil, err
-	}
-	if from != 0 {
-		return c.repo.EventLast(), nil
-	}
-
-	return text("не переданы параметры")
+type EventNewMsg struct {
+	InAppID            string
+	IsSilent           bool
+	ReplyInAppID       string
+	Username           string
+	Text               string
+	AttachmentInAppIDs []string
+	Forwards           []EventNewMsgForward
+	Attachments        map[string]EventNewMsgAttachment
 }
-func handlerEventSend(c Context, r *http.Request) (any, error)  { return nil, nil }
-func handlerFile(c Context, r *http.Request) (any, error)       { return nil, nil }
-func handlerFileUpload(c Context, r *http.Request) (any, error) { return nil, nil }
-func handlerAssoc(c Context, r *http.Request) (any, error)      { return nil, nil }
-func handlerAssocWrite(c Context, r *http.Request) (any, error) { return nil, nil }
 
-func intFromQury(r *http.Request, name string) (int, error) {
+type EventNewMsgForward struct {
+	InAppID            int
+	Username           string
+	Text               string
+	CreateDate         string
+	AttachmentInAppIDs []string
+}
+
+type EventNewMsgAttachment struct {
+	InAppID    string
+	FileID     int
+	HasSpoiler bool
+	Type       AttachmentType
+	// Общедоступная ссылка для загрузки файла.
+	// Если ссылка не передана и по такому FileID не найдено файлов, то клиент должен будет загрузить файлы на специальный эндпоинт
+	Url string
+}
+
+type EventNewMsgResponse struct {
+	ID                               int
+	RequireUploadAttachmentsInAppIDs []string
+}
+
+func handlerCreateMessage(c Context, r *http.Request) (_ any, err error) {
+	var b []byte
+	if _, err = r.Body.Read(b); err != nil {
+		return text("read body err: " + err.Error())
+	}
+
+	var newMsg EventNewMsg
+	if err = json.Unmarshal(b, &newMsg); err != nil {
+		return nil, err
+	}
+
+	EventNewMessage(c.app, newMsg)
+
+	return nil, nil
+}
+
+func handlerFilesUpload(c Context, r *http.Request) (_ any, err error) {
+	if err = r.ParseMultipartForm(21 << 20); err != nil {
+		return nil, err
+	}
+	var file File
+
+	// InAppID
+	if len(r.MultipartForm.Value["id"]) != 1 {
+		return text("id.len must have equals 1")
+	}
+	file.InAppID = r.MultipartForm.Value["id"][0]
+
+	// Type
+	if len(r.MultipartForm.Value["type"]) != 1 {
+		return text("type.len must have equals 1")
+	}
+	file.Type, err = strconv.Atoi(r.MultipartForm.Value["type"][0])
+
+	// Bytes
+	fileHeader := r.MultipartForm.File["file"]
+	if len(fileHeader) != 1 {
+		return text("file.len must have equals 1")
+	}
+	var mpFile multipart.File
+	if mpFile, err = fileHeader[0].Open(); err != nil {
+		return text("Unable to open file")
+	}
+	defer mpFile.Close()
+	if file.Bytes, err = io.ReadAll(mpFile); err != nil {
+		return text("Unable to read file")
+	}
+
+	FileUpload(c.app, file)
+
+	return text("ok")
+}
+
+func intFromQuery(r *http.Request, name string) (int, error) {
 	queryVal := r.URL.Query().Get(name)
 	if queryVal == "" {
 		return 0, nil
@@ -110,4 +152,22 @@ func intFromQury(r *http.Request, name string) (int, error) {
 	} else {
 		return val, nil
 	}
+}
+
+func intsFromQuery(r *http.Request, name string) ([]int, error) {
+	queryVal := r.URL.Query().Get(name)
+	if queryVal == "" {
+		return nil, nil
+	}
+	strValues := strings.Split(queryVal, ",")
+	result := make([]int, len(strValues))
+	for i, v := range strValues {
+		if val, err := strconv.Atoi(v); err != nil {
+			return nil, err
+		} else {
+			result[i] = val
+		}
+	}
+
+	return result, nil
 }
