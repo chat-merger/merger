@@ -14,7 +14,7 @@ import (
 type File struct {
 	Bytes   []byte
 	Type    int
-	InAppID string
+	LocalID string
 }
 type Context struct {
 	app *App
@@ -56,26 +56,25 @@ func handlerOk(_ Context, _ *http.Request) (any, error) {
 }
 
 type EventNewMsg struct {
-	InAppID            string
-	IsSilent           bool
-	ReplyInAppID       string
-	Username           string
-	Text               string
-	AttachmentInAppIDs []string
-	Forwards           []EventNewMsgForward
-	Attachments        EventNewMsgAttachment
+	LocalID      string
+	IsSilent     bool
+	ReplyLocalID string
+	Username     string
+	Text         string
+	Forwards     []EventNewMsgForward
+	Attachments  []EventNewMsgAttachment
 }
 
 type EventNewMsgForward struct {
-	InAppID            int
-	Username           string
-	Text               string
-	CreateDate         string
-	AttachmentInAppIDs []string
+	LocalID     int
+	Username    string
+	Text        string
+	CreateDate  string
+	Attachments []EventNewMsgAttachment
 }
 
 type EventNewMsgAttachment struct {
-	InAppID    string
+	LocalID    string
 	HasSpoiler bool
 	Type       int
 	// Общедоступная ссылка для загрузки файла.
@@ -85,7 +84,7 @@ type EventNewMsgAttachment struct {
 
 type EventNewMsgResponse struct {
 	ID                               int
-	RequireUploadAttachmentsInAppIDs []string
+	RequireUploadAttachmentsLocalIDs []string
 }
 
 func handlerNewMessage(c Context, r *http.Request) (_ any, err error) {
@@ -110,11 +109,11 @@ func handlerFilesUpload(c Context, r *http.Request) (_ any, err error) {
 	}
 	var file File
 
-	// InAppID
+	// MsgLID
 	if len(r.MultipartForm.Value["id"]) != 1 {
 		return text("id.len must have equals 1")
 	}
-	file.InAppID = r.MultipartForm.Value["id"][0]
+	file.LocalID = r.MultipartForm.Value["id"][0]
 
 	// Type
 	if len(r.MultipartForm.Value["type"]) != 1 {

@@ -19,13 +19,14 @@ func collectHosts(apps []Application) []string {
 }
 
 type Message struct {
-	ID int `gorm:"column:id;primary_key"`
+	ID    int `gorm:"column:id;primary_key"`
+	AppID int `gorm:"column:appId"`
 	//IsSilent   bool   `gorm:"column:isSilent"`
 	//IsForward  bool   `gorm:"column:isForward"`
 	Reply int `gorm:"column:reply"`
 	//Username   string `gorm:"column:username"`
 	//Text       string `gorm:"column:text"`
-	CreateDate int `gorm:"column:createDate"`
+	//CreateDate int `gorm:"column:createDate"`
 }
 
 type MessageExt struct {
@@ -36,21 +37,22 @@ type MessageExt struct {
 func (*Message) TableName() string { return "Messages" }
 
 type MessageMap struct {
-	AppID   int    `gorm:"column:appId"`
-	MsgID   int    `gorm:"column:msgId"`
-	InAppID string `gorm:"column:inAppId"`
+	AppID      int    `gorm:"column:appId"`
+	MsgID      int    `gorm:"column:msgID"`
+	MsgLocalID string `gorm:"column:msgLocalID"`
 }
 
 func (*MessageMap) TableName() string { return "MessagesMap" }
 
 type Attachment struct {
 	ID         int    `gorm:"column:id"`
-	AppID      int    `gorm:"column:fileId"`
-	InAppID    string `gorm:"column:inAppId"`
+	LocalID    string `gorm:"column:localId"`
+	AppID      int    `gorm:"column:appId"`
 	Url        string `gorm:"column:url"`
 	HasSpoiler bool   `gorm:"column:hasSpoiler"`
 	Type       int    `gorm:"column:type"`
-	WaitUpload bool   `gorm:"column:waitUpload"`
+	FileName   string `gorm:"column:fileName"`
+	Confirmed  bool   `gorm:"column:confirmed"`
 }
 
 func (*Attachment) TableName() string { return "Attachments" }
@@ -65,9 +67,10 @@ const (
 	AtSticker = 5
 )
 
-type Files struct {
-	ID       int    `gorm:"column:id"`
-	FileName string `gorm:"column:fileName"`
-}
-
-func (*Files) TableName() string { return "Files" }
+//type Files struct {
+//	ID       int    `gorm:"column:id"`
+//	AppID    int    `gorm:"column:appId"`
+//	FileName string `gorm:"column:fileName"`
+//}
+//
+//func (*Files) TableName() string { return "Files" }

@@ -1,7 +1,7 @@
 package internal
 
 type callbackNewMsgForward struct {
-	InAppID     int
+	LocalID     int
 	Username    string
 	Text        string
 	CreateDate  string
@@ -12,7 +12,7 @@ type callbackNewMsg struct {
 	ID           int
 	IsSilent     bool
 	Reply        int
-	ReplyInAppID string
+	ReplyLocalID string
 	Username     string
 	Text         string
 	Attachments  []callbackNewMsgAttachment
@@ -20,7 +20,7 @@ type callbackNewMsg struct {
 }
 
 type callbackNewMsgResponse struct {
-	InAppID string
+	LocalID string
 }
 
 type callbackNewMsgAttachment struct {

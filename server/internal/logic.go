@@ -4,12 +4,12 @@ func EventNewMessage(a *App, e EventNewMsg) {
 	msg, forwards := SaveMsg(a, e)
 	replyByAppID := MsgMapByAppID(msg.Reply)
 	callbackMsgMap := make(map[int]callbackNewMsg)
-	for _, app := range Apps(a) {
+	for _, app := range Applications(a, msg.AppID) {
 		callbackMsgMap[app.ID] = callbackNewMsg{
 			ID:           msg.ID,
 			IsSilent:     e.IsSilent,
 			Reply:        msg.Reply,
-			ReplyInAppID: replyByAppID[app.ID].InAppID,
+			ReplyLocalID: replyByAppID[app.ID].MsgLID,
 			Username:     e.Username,
 			Text:         e.Text,
 			Forwards:     MessageExtToCbkForwards(forwards),
@@ -28,7 +28,7 @@ func attachAppIDToID() {}
 
 func SaveMsg(a *App, e EventNewMsg) (MessageExt, []MessageExt) {}
 
-func Apps(a *App) []Application {}
+func Applications(a *App, excludeIDs ...int) []Application {}
 
 func IDByInApp(id string) int {}
 func InAppByID(id int) string {}
