@@ -23,7 +23,9 @@ type Context struct {
 func setup(router *http.ServeMux, app *App) {
 	ctx := Context{app: app}
 	router.HandleFunc("GET /", wrap(ctx, handlerOk))
-	router.HandleFunc("POST /events/createMessage", wrap(ctx, handlerCreateMessage))
+	router.HandleFunc("POST /events/newMessage", wrap(ctx, handlerNewMessage))
+	// сохранить сообщение, реплай например
+	router.HandleFunc("POST /events/saveMessage", wrap(ctx, handlerSaveMessage))
 	router.HandleFunc("POST /files", wrap(ctx, handlerFilesUpload))
 }
 
@@ -63,7 +65,8 @@ type EventNewMsg struct {
 	Text               string
 	AttachmentInAppIDs []string
 	Forwards           []EventNewMsgForward
-	Attachments        map[string]EventNewMsgAttachment
+	Attachments        EventNewMsgAttachment
+	//Attachments        map[string]EventNewMsgAttachment
 }
 
 type EventNewMsgForward struct {
@@ -76,9 +79,8 @@ type EventNewMsgForward struct {
 
 type EventNewMsgAttachment struct {
 	InAppID    string
-	FileID     int
 	HasSpoiler bool
-	Type       AttachmentType
+	Type       int
 	// Общедоступная ссылка для загрузки файла.
 	// Если ссылка не передана и по такому FileID не найдено файлов, то клиент должен будет загрузить файлы на специальный эндпоинт
 	Url string
@@ -89,7 +91,7 @@ type EventNewMsgResponse struct {
 	RequireUploadAttachmentsInAppIDs []string
 }
 
-func handlerCreateMessage(c Context, r *http.Request) (_ any, err error) {
+func handlerNewMessage(c Context, r *http.Request) (_ any, err error) {
 	var b []byte
 	if _, err = r.Body.Read(b); err != nil {
 		return text("read body err: " + err.Error())

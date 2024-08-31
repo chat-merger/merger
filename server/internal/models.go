@@ -1,41 +1,58 @@
 package internal
 
 type Application struct {
-	ID       int    `gorm:"column:id;primary_key"`
-	Name     string `gorm:"column:name"`
-	XKey     string `gorm:"column:xkey"`
-	Callback string `gorm:"column:callback"`
+	ID   int    `gorm:"column:id;primary_key"`
+	Name string `gorm:"column:name"`
+	XKey string `gorm:"column:xkey"`
+	Host string `gorm:"column:host"`
 }
 
 func (*Application) TableName() string { return "Applications" }
 
+func collectHosts(apps []Application) []string {
+	hosts := make([]string, len(apps))
+	for i := range apps {
+		hosts[i] = apps[i].Host
+	}
+
+	return hosts
+}
+
 type Message struct {
-	ID         int    `gorm:"column:id;primary_key"`
-	IsSilent   bool   `gorm:"column:isSilent"`
-	IsForward  bool   `gorm:"column:isForward"`
-	Reply      int    `gorm:"column:reply"`
-	Username   string `gorm:"column:username"`
-	Text       string `gorm:"column:text"`
-	CreateDate int    `gorm:"column:createDate"`
+	ID int `gorm:"column:id;primary_key"`
+	//IsSilent   bool   `gorm:"column:isSilent"`
+	//IsForward  bool   `gorm:"column:isForward"`
+	Reply int `gorm:"column:reply"`
+	//Username   string `gorm:"column:username"`
+	//Text       string `gorm:"column:text"`
+	CreateDate int `gorm:"column:createDate"`
 }
 
 func (*Message) TableName() string { return "Messages" }
 
 type MessageMap struct {
+	AppID   int    `gorm:"column:appId"`
 	MsgID   int    `gorm:"column:msgId"`
 	InAppID string `gorm:"column:inAppId"`
 }
 
-func (*MessageMap) TableName() string { return "MessagesMap" }
+func msgMapByAppID(msgID int) map[int]MessageMap {
 
-type Attachments struct {
-	MsgID      int            `gorm:"column:msgId"`
-	FileID     int            `gorm:"column:fileId"`
-	HasSpoiler bool           `gorm:"column:hasSpoiler"`
-	Type       AttachmentType `gorm:"column:type"`
 }
 
-func (*Attachments) TableName() string { return "Attachments" }
+func (*MessageMap) TableName() string { return "MessagesMap" }
+
+type Attachment struct {
+	ID         int    `gorm:"column:id"`
+	AppID      int    `gorm:"column:fileId"`
+	InAppID    string `gorm:"column:inAppId"`
+	Url        string `gorm:"column:url"`
+	HasSpoiler bool   `gorm:"column:hasSpoiler"`
+	Type       int    `gorm:"column:type"`
+	WaitUpload bool   `gorm:"column:waitUpload"`
+}
+
+func (*Attachment) TableName() string { return "Attachments" }
 
 type AttachmentType int
 

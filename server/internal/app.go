@@ -18,6 +18,7 @@ import (
 type App struct {
 	ConfigPath string
 	cfg        *Config
+	cbApi      callbackAPI
 	db         *gorm.DB
 	redis      *redis.Client
 }

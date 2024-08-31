@@ -1,36 +1,35 @@
 package internal
 
-type CallbackNewMsgForward struct {
-	InAppID       int
-	Username      string
-	Text          string
-	CreateDate    string
-	AttachmentIDs []string
+type callbackNewMsgForward struct {
+	InAppID     int
+	Username    string
+	Text        string
+	CreateDate  string
+	Attachments []callbackNewMsgAttachment
 }
 
-type CallbackNewMsg struct {
-	ID            int
-	IsSilent      bool
-	Reply         int
-	ReplyInAppID  int
-	Username      string
-	Text          string
-	AttachmentIDs []string
-	Forwards      []CallbackNewMsgForward
-	Attachments   map[string]CallbackNewMsgAttachment
+type callbackNewMsg struct {
+	ID           int
+	IsSilent     bool
+	Reply        int
+	ReplyInAppID string
+	Username     string
+	Text         string
+	Attachments  []callbackNewMsgAttachment
+	Forwards     []callbackNewMsgForward
 }
 
-type CallbackNewMsgResponse struct {
+type callbackNewMsgResponse struct {
 	InAppID string
 }
 
-type CallbackNewMsgAttachment struct {
+type callbackNewMsgAttachment struct {
 	HasSpoiler bool
-	Type       AttachmentType
+	Type       int
 	Url        string
 	WaitUpload bool // false - ждать ивента о том что файл стал доступен по ссылке
 }
 
-type CallbackAPI interface {
-	OnNewMsg(CallbackNewMsg) CallbackNewMsgResponse
+type callbackAPI interface {
+	OnNewMsg(c map[string]callbackNewMsg) callbackNewMsgResponse
 }
