@@ -1,14 +1,12 @@
 package internal
 
 import (
-	"context"
 	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
 
 	"github.com/pelletier/go-toml"
-	"github.com/redis/go-redis/v9"
 	"github.com/urfave/cli"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -23,16 +21,10 @@ type App struct {
 	cfg         *Config
 	callbackApi callback.API
 	db          *gorm.DB
-	redis       *redis.Client
 }
 
 func (a *App) CallbackApi() callback.API { return a.callbackApi }
 func (a *App) DB() *gorm.DB              { return a.db }
-
-//type Context interface {
-//	CallbackApi() callback.API
-//	DB() *gorm.DB
-//}
 
 type Config struct {
 	Port            int    `toml:"port"`
@@ -52,12 +44,6 @@ func (a *App) Start(c *cli.Context) (err error) {
 		return err
 	}
 	defer closeDB()
-	//
-	//var closeRedis func() error
-	//if a.redis, closeRedis, err = connectToRedis(a.cfg.RedisConnection); err != nil {
-	//	return err
-	//}
-	//defer closeRedis()
 
 	return startAndListenServer(a)
 }
@@ -94,20 +80,6 @@ func handlePanic(handler http.Handler) http.HandlerFunc {
 
 		handler.ServeHTTP(w, r)
 	}
-}
-
-func connectToRedis(connection string) (*redis.Client, func() error, error) {
-	opts, err := redis.ParseURL(connection)
-	if err != nil {
-		return nil, nil, fmt.Errorf("parse redis url from cfg: %s", err)
-	}
-
-	rdb := redis.NewClient(opts)
-	if err = rdb.Ping(context.TODO()).Err(); err != nil {
-		return nil, nil, fmt.Errorf("ping redis client: %s", err)
-	}
-
-	return rdb, rdb.Close, nil
 }
 
 func connectToDB(dsn string) (*gorm.DB, func() error, error) {
