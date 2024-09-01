@@ -1,0 +1,16 @@
+### GET request to example server
+GET https://examples.http-client.intellij.net/get
+    ?generated-in=GoLand
+
+### OK
+GET http://localhost:43687
+
+### Send event "New message"
+POST http://localhost:43687/events/newMessage
+X-App-Id: 123
+Content-Type: application/json
+
+{
+  "id": 999,
+  "value": "content"
+}

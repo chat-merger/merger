@@ -8,4 +8,6 @@ type File struct {
 
 const TableFiles = "Files"
 
+var InstFile = new(File)
+
 func (*File) TableName() string { return TableFiles }

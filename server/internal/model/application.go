@@ -9,4 +9,6 @@ type Application struct {
 
 const TableApplications = "Applications"
 
+var InstApplication = new(Application)
+
 func (*Application) TableName() string { return TableApplications }

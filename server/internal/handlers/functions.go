@@ -12,18 +12,19 @@ import (
 
 func wrap(c Context, fn func(c Context, r *http.Request) (any, error)) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if response, err := fn(c, r); err != nil {
+		response, err := fn(c, r)
+		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
+			response = err.Error()
 		} else {
 			w.WriteHeader(http.StatusOK)
-			var b []byte
-			if b, err = json.Marshal(response); err != nil {
-				b = []byte(fmt.Sprintf("%v", response))
-			}
-			if _, err = w.Write(b); err != nil {
-				slog.Error(err.Error())
-			}
-
+		}
+		var b []byte
+		if b, err = json.Marshal(response); err != nil {
+			b = []byte(fmt.Sprintf("%v", response))
+		}
+		if _, err = w.Write(b); err != nil {
+			slog.Error(err.Error())
 		}
 	}
 }

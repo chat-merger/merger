@@ -44,12 +44,12 @@ func (a *App) Start(c *cli.Context) (err error) {
 	if a.cfg, err = parseConfig(a.ConfigPath); err != nil {
 		return err
 	}
-	//
-	//var closeDB func() error
-	//if a.db, closeDB, err = connectToDB(a.cfg.DbConnection); err != nil {
-	//	return err
-	//}
-	//defer closeDB()
+
+	var closeDB func() error
+	if a.db, closeDB, err = connectToDB(a.cfg.DbConnection); err != nil {
+		return err
+	}
+	defer closeDB()
 	//
 	//var closeRedis func() error
 	//if a.redis, closeRedis, err = connectToRedis(a.cfg.RedisConnection); err != nil {

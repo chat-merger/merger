@@ -34,13 +34,9 @@ func handlerEventMessageNew(c Context, r *http.Request) (_ any, err error) {
 	if appID, err = headerAppID(r); err != nil {
 		return nil, err
 	}
-	var b []byte
-	if _, err = r.Body.Read(b); err != nil {
-		return text("read body err: " + err.Error())
-	}
 
 	var newMessage event.MessageNew
-	if err = json.Unmarshal(b, &newMessage); err != nil {
+	if err = json.NewDecoder(r.Body).Decode(&newMessage); err != nil {
 		return nil, err
 	}
 	newMessage.AppID = appID

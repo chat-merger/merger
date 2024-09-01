@@ -12,6 +12,8 @@ type Attachment struct {
 
 const TableAttachments = "Attachments"
 
+var InstAttachment = new(Attachment)
+
 func (*Attachment) TableName() string { return TableAttachments }
 
 type AttachmentType int

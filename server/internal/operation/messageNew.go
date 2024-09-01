@@ -73,7 +73,7 @@ func SaveMsg(c Context, e event.MessageNew) (model.MessageExt, []ForwardExt, err
 		ID int `gorm:"column:msgId"`
 	}
 	if err := c.DB().
-		Model(model.MessageMap{}).
+		Model(model.InstMessageMap).
 		Select("msgId").
 		Where("appId = ?", e.AppID).
 		Where("msgLocalId = ?", e.ReplyLocalID).
@@ -82,7 +82,7 @@ func SaveMsg(c Context, e event.MessageNew) (model.MessageExt, []ForwardExt, err
 	}
 	msg.Reply = reply.ID
 
-	if err := c.DB().Save(&msg).Error; err != nil {
+	if err := c.DB().Create(&msg.Message).Error; err != nil {
 		return model.MessageExt{}, nil, err
 	}
 
@@ -139,9 +139,11 @@ func SaveMsg(c Context, e event.MessageNew) (model.MessageExt, []ForwardExt, err
 		forwardsAttachments = append(forwardsAttachments, forwards[i].Attachments...)
 	}
 
-	// Save attachments
-	if err := c.DB().Create(msg.Attachments).Error; err != nil {
-		return model.MessageExt{}, nil, err
+	if len(msg.Attachments) != 0 {
+		// Save attachments
+		if err := c.DB().Create(msg.Attachments).Error; err != nil {
+			return model.MessageExt{}, nil, err
+		}
 	}
 
 	return msg, forwards, nil
@@ -185,9 +187,9 @@ func AttachIDsInWaitingUpload(c Context, ids []int) ([]int, error) {
 	var waitingIDs []int
 	if err := c.DB().
 		Table(model.TableAttachments).
-		Joins("LEFT JOIN "+model.TableFiles+" ON Attachments.id = File.attachmentId").
+		Joins("LEFT JOIN "+model.TableFiles+" ON Attachments.id = Files.attachmentId").
 		Where("Attachments.id IN (?)", ids).
-		Where("File.id IS NULL").
+		Where("Files.id IS NULL").
 		Pluck("Attachments.id AS id", &waitingIDs).Error; err != nil {
 		return nil, err
 	}

@@ -13,4 +13,6 @@ type MessageExt struct {
 
 const TableMessages = "Messages"
 
+var InstMessage = new(Message)
+
 func (*Message) TableName() string { return TableMessages }

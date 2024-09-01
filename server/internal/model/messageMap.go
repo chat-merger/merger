@@ -8,4 +8,6 @@ type MessageMap struct {
 
 const TableMessagesMap = "MessagesMap"
 
+var InstMessageMap = new(MessageMap)
+
 func (*MessageMap) TableName() string { return TableMessagesMap }

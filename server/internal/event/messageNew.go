@@ -1,14 +1,14 @@
 package event
 
 type MessageNew struct {
-	AppID        int
-	LocalID      string
-	IsSilent     bool
-	ReplyLocalID string
-	Username     string
-	Text         string
-	Forwards     []ForwardNew
-	Attachments  []AttachmentNew
+	AppID        int             `json:"appID,omitempty"`
+	LocalID      string          `json:"localID,omitempty"`
+	IsSilent     bool            `json:"isSilent,omitempty"`
+	ReplyLocalID string          `json:"replyLocalID,omitempty"`
+	Username     string          `json:"username,omitempty"`
+	Text         string          `json:"text,omitempty"`
+	Forwards     []ForwardNew    `json:"forwards,omitempty"`
+	Attachments  []AttachmentNew `json:"attachments,omitempty"`
 }
 
 func CollectMessageNewForwardsLoclIDs(fwds []ForwardNew) []string {
@@ -21,18 +21,18 @@ func CollectMessageNewForwardsLoclIDs(fwds []ForwardNew) []string {
 }
 
 type ForwardNew struct {
-	LocalID     string
-	Username    string
-	Text        string
-	CreateDate  string
-	Attachments []*AttachmentNew
+	LocalID     string           `json:"localID,omitempty"`
+	Username    string           `json:"username,omitempty"`
+	Text        string           `json:"text,omitempty"`
+	CreateDate  string           `json:"createDate,omitempty"`
+	Attachments []*AttachmentNew `json:"attachments,omitempty"`
 }
 
 type AttachmentNew struct {
-	LocalID    string
-	HasSpoiler bool
-	Type       int
+	LocalID    string `json:"localID,omitempty"`
+	HasSpoiler bool   `json:"hasSpoiler,omitempty"`
+	Type       int    `json:"type,omitempty"`
 	// Общедоступная ссылка для загрузки файла.
 	// Если ссылка не передана и по такому FileID не найдено файлов, то клиент должен будет загрузить файлы на специальный эндпоинт
-	Url string
+	Url string `json:"url,omitempty"`
 }

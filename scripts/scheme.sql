@@ -15,7 +15,7 @@ create table Messages
     reply integer null references Messages -- сообщение создано как "ответ" на ID другого сообщения
 );
 
-create table MessageMap
+create table MessagesMap
 (
     appId      integer not null references Applications,
     msgId      integer not null references Messages,
@@ -36,5 +36,6 @@ create table Attachments
 create table Files
 (
     id       integer primary key autoincrement,
-    fileName text not null
+    fileName text not null,
+    attachmentId int not null references Attachments
 );
