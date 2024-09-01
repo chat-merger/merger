@@ -1,4 +1,4 @@
-package operation
+package new
 
 import (
 	"slices"
@@ -8,59 +8,16 @@ import (
 	"github.com/chat-merger/merger/server/internal/model"
 )
 
-func MessageNew(c Context, e event.MessageNew) error {
-	msg, forwards, err := SaveMsg(c, e)
-	if err != nil {
-		return err
-	}
-
-	attachIDs := CollectForwardExtAttachIDs(forwards)
-	var attachWaitingIDs []int
-	if attachWaitingIDs, err = AttachIDsInWaitingUpload(c, attachIDs); err != nil {
-		return err
-	}
-
-	var replyByAppID map[int]model.MessageMap
-	if replyByAppID, err = AppIDToMsgMapByMsgID(c, msg.Reply); err != nil {
-		return err
-	}
-
-	var applications []*model.Application
-	if applications, err = Applications(c, msg.AppID); err != nil {
-		return err
-	}
-
-	callbackNewMessages := make([]callback.NewMessage, 0, len(applications))
-	for _, app := range applications {
-		callbackNewMessages = append(callbackNewMessages, callback.NewMessage{
-			App:         *app,
-			ID:          msg.ID,
-			IsSilent:    e.IsSilent,
-			Reply:       msg.Reply,
-			ReplyLocal:  replyByAppID[app.ID].MsgLocalID,
-			Username:    e.Username,
-			Text:        e.Text,
-			Forwards:    ForwardExtToCbkForwards(forwards, attachWaitingIDs),
-			Attachments: AttachmentToCbkAttachs(msg.Attachments, attachWaitingIDs),
-		})
-	}
-
-	var responses []callback.NewMsgResponse
-	if responses, err = c.CallbackApi().OnNewMsg(callbackNewMessages); err != nil {
-		return err
-	}
-
-	messageMaps := NewMsgResponseToMsgMap(responses)
-	if err = c.DB().
-		Table(model.TableMessagesMap).
-		Create(&messageMaps).Error; err != nil {
-		return err
-	}
-
-	return nil
+type ForwardExt struct {
+	ID          int
+	LocalID     string
+	Username    string
+	Text        string
+	CreateDate  string
+	Attachments []*model.Attachment
 }
 
-func NewMsgResponseToMsgMap(responses []callback.NewMsgResponse) []*model.MessageMap {
+func NewMsgResponseToMsgMap(responses []callback.MessageNewResponse) []*model.MessageMap {
 	mm := make([]*model.MessageMap, len(responses))
 	for i, response := range responses {
 		mm[i] = &model.MessageMap{
@@ -73,10 +30,10 @@ func NewMsgResponseToMsgMap(responses []callback.NewMsgResponse) []*model.Messag
 	return mm
 }
 
-func ForwardExtToCbkForwards(exts []ForwardExt, attachWaitingIDs []int) []callback.NewForward {
-	newForwards := make([]callback.NewForward, 0, len(exts))
+func ForwardExtToCbkForwards(exts []ForwardExt, attachWaitingIDs []int) []callback.ForwardNew {
+	newForwards := make([]callback.ForwardNew, 0, len(exts))
 	for _, ext := range exts {
-		newForwards = append(newForwards, callback.NewForward{
+		newForwards = append(newForwards, callback.ForwardNew{
 			ID:          ext.ID,
 			LocalID:     ext.LocalID,
 			Username:    ext.Username,
@@ -89,7 +46,7 @@ func ForwardExtToCbkForwards(exts []ForwardExt, attachWaitingIDs []int) []callba
 	return newForwards
 }
 
-func SaveMsg(c Context, e event.MessageNew) (model.MessageExt, []ForwardExt, error) {
+func SaveMessage(c event.Context, e Message) (model.MessageExt, []ForwardExt, error) {
 	// Save message
 	msg := model.MessageExt{Message: model.Message{AppID: e.AppID}}
 	var reply struct {
@@ -123,7 +80,7 @@ func SaveMsg(c Context, e event.MessageNew) (model.MessageExt, []ForwardExt, err
 
 	var forwardsAttachments []*model.Attachment
 
-	fwdLocalIDs := event.CollectMessageNewForwardsLocalIDs(e.Forwards)
+	fwdLocalIDs := CollectMessageNewForwardsLocalIDs(e.Forwards)
 	var messagesMap []model.MessageMap
 	if err := c.DB().
 		Table(model.TableMessagesMap).
@@ -139,17 +96,15 @@ func SaveMsg(c Context, e event.MessageNew) (model.MessageExt, []ForwardExt, err
 	forwards := make([]ForwardExt, len(e.Forwards))
 	for i, forward := range e.Forwards {
 		forwards[i] = ForwardExt{
-			Forward: Forward{
-				ID:         fwdLocalToID[forward.LocalID],
-				LocalID:    forward.LocalID,
-				Username:   forward.Username,
-				Text:       forward.Text,
-				CreateDate: forward.CreateDate,
-			},
+			ID:          fwdLocalToID[forward.LocalID],
+			LocalID:     forward.LocalID,
+			Username:    forward.Username,
+			Text:        forward.Text,
+			CreateDate:  forward.CreateDate,
+			Attachments: make([]*model.Attachment, len(e.Forwards)),
 		}
 
 		// Fill attachments of forwards
-		forwards[i].Attachments = make([]*model.Attachment, len(e.Forwards))
 		for j, attach := range forward.Attachments {
 			forwards[i].Attachments[j] = &model.Attachment{
 				LocalID:    attach.LocalID,
@@ -172,20 +127,6 @@ func SaveMsg(c Context, e event.MessageNew) (model.MessageExt, []ForwardExt, err
 	return msg, forwards, nil
 }
 
-type Forward struct {
-	ID          int
-	LocalID     string
-	Username    string
-	Text        string
-	CreateDate  string
-	Attachments []model.Attachment
-}
-
-type ForwardExt struct {
-	Forward
-	Attachments []*model.Attachment
-}
-
 func CollectForwardExtAttachIDs(exts []ForwardExt) []int {
 	var attachIDs []int
 	for _, ext := range exts {
@@ -195,18 +136,7 @@ func CollectForwardExtAttachIDs(exts []ForwardExt) []int {
 	return attachIDs
 }
 
-func Applications(c Context, excludeIDs ...int) ([]*model.Application, error) {
-	var apps []*model.Application
-	if err := c.DB().
-		Where("id NOT IN (?)", excludeIDs).
-		Find(&apps).Error; err != nil {
-		return nil, err
-	}
-
-	return apps, nil
-}
-
-func AttachIDsInWaitingUpload(c Context, ids []int) ([]int, error) {
+func AttachIDsInWaitingUpload(c event.Context, ids []int) ([]int, error) {
 	var waitingIDs []int
 	if err := c.DB().
 		Table(model.TableAttachments).
@@ -220,10 +150,10 @@ func AttachIDsInWaitingUpload(c Context, ids []int) ([]int, error) {
 	return waitingIDs, nil
 }
 
-func AttachmentToCbkAttachs(attachs []*model.Attachment, waitingIDs []int) []callback.NewAttachment {
-	newAttachments := make([]callback.NewAttachment, 0, len(attachs))
+func AttachmentToCbkAttachs(attachs []*model.Attachment, waitingIDs []int) []callback.AttachmentNew {
+	newAttachments := make([]callback.AttachmentNew, 0, len(attachs))
 	for _, attach := range attachs {
-		newAttachments = append(newAttachments, callback.NewAttachment{
+		newAttachments = append(newAttachments, callback.AttachmentNew{
 			HasSpoiler: attach.HasSpoiler,
 			Type:       attach.Type,
 			Url:        attach.Url,
@@ -234,7 +164,7 @@ func AttachmentToCbkAttachs(attachs []*model.Attachment, waitingIDs []int) []cal
 	return newAttachments
 }
 
-func AppIDToMsgMapByMsgID(c Context, msgID int) (map[int]model.MessageMap, error) {
+func AppIDToMsgMapByMsgID(c event.Context, msgID int) (map[int]model.MessageMap, error) {
 	var msgMapSl []model.MessageMap
 	if err := c.DB().
 		Where("msgId = ?", msgID).

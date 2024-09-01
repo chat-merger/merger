@@ -1,4 +1,4 @@
-package operation
+package event
 
 import (
 	"gorm.io/gorm"

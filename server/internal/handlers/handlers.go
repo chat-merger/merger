@@ -13,7 +13,8 @@ import (
 
 	"github.com/chat-merger/merger/server/internal/callback"
 	"github.com/chat-merger/merger/server/internal/event"
-	"github.com/chat-merger/merger/server/internal/operation"
+	"github.com/chat-merger/merger/server/internal/event/file/upload"
+	eventMessageNew "github.com/chat-merger/merger/server/internal/event/message/new"
 )
 
 type Context interface {
@@ -26,18 +27,22 @@ func Setup(c Context, router *http.ServeMux) {
 	router.HandleFunc("POST /files", wrap(c, handlerFileUpload))
 	router.HandleFunc("GET /", wrap(c, handlerOk))
 	router.HandleFunc("POST /echo", wrap(c, handlerEcho))
-	router.HandleFunc("POST /app", wrap(c, handlerApp))
+	router.HandleFunc("POST /test/app", wrap(c, handlerApp))
 }
 
 func handlerApp(_ Context, r *http.Request) (_ any, err error) {
-	var newMessage callback.NewMessage
-	if err = json.NewDecoder(r.Body).Decode(&newMessage); err != nil {
+	var requestBody callback.Body
+	if err = json.NewDecoder(r.Body).Decode(&requestBody); err != nil {
 		return nil, err
 	}
-
-	return callback.NewMsgResponse{
-		LocalID: strconv.Itoa(rand.Int()),
-	}, nil
+	switch {
+	case requestBody.MessageNew != nil:
+		return callback.MessageNewResponse{
+			LocalID: strconv.Itoa(rand.Int()),
+		}, nil
+	default:
+		return text("unexpected callback")
+	}
 }
 
 func handlerEcho(_ Context, r *http.Request) (any, error) {
@@ -56,14 +61,14 @@ func handlerEventMessageNew(c Context, r *http.Request) (_ any, err error) {
 		return nil, err
 	}
 
-	var newMessage event.MessageNew
+	var newMessage eventMessageNew.Message
 	if err = json.NewDecoder(r.Body).Decode(&newMessage); err != nil {
 		return nil, err
 	}
 	newMessage.AppID = appID
 
-	if err = operation.MessageNew(c, newMessage); err != nil {
-		return text("operation.MessageNew: " + err.Error())
+	if err = eventMessageNew.Exec(c, newMessage); err != nil {
+		return text("eventMessageNew.Exec: " + err.Error())
 	}
 
 	return nil, nil
@@ -106,8 +111,8 @@ func handlerFileUpload(c Context, r *http.Request) (_ any, err error) {
 		return text("Unable to read file")
 	}
 
-	if err = operation.FileUpload(c, file); err != nil {
-		return text("operation.FileUpload: " + err.Error())
+	if err = upload.FileUpload(c, file); err != nil {
+		return text("event.FileUpload: " + err.Error())
 	}
 
 	return text("ok")
