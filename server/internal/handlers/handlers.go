@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math/rand"
 	"mime/multipart"
 	"net/http"
 	"strconv"
@@ -21,10 +22,22 @@ type Context interface {
 }
 
 func Setup(c Context, router *http.ServeMux) {
-	router.HandleFunc("GET /", wrap(c, handlerOk))
 	router.HandleFunc("POST /events/newMessage", wrap(c, handlerEventMessageNew))
 	router.HandleFunc("POST /files", wrap(c, handlerFileUpload))
+	router.HandleFunc("GET /", wrap(c, handlerOk))
 	router.HandleFunc("POST /echo", wrap(c, handlerEcho))
+	router.HandleFunc("POST /app", wrap(c, handlerApp))
+}
+
+func handlerApp(_ Context, r *http.Request) (_ any, err error) {
+	var newMessage callback.NewMessage
+	if err = json.NewDecoder(r.Body).Decode(&newMessage); err != nil {
+		return nil, err
+	}
+
+	return callback.NewMsgResponse{
+		LocalID: strconv.Itoa(rand.Int()),
+	}, nil
 }
 
 func handlerEcho(_ Context, r *http.Request) (any, error) {

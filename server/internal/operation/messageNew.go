@@ -25,15 +25,15 @@ func MessageNew(c Context, e event.MessageNew) error {
 		return err
 	}
 
-	callbackMsgMap := make(map[int]callback.NewMessage)
-
 	var applications []*model.Application
 	if applications, err = Applications(c, msg.AppID); err != nil {
 		return err
 	}
 
+	callbackNewMessages := make([]callback.NewMessage, 0, len(applications))
 	for _, app := range applications {
-		callbackMsgMap[app.ID] = callback.NewMessage{
+		callbackNewMessages = append(callbackNewMessages, callback.NewMessage{
+			App:         *app,
 			ID:          msg.ID,
 			IsSilent:    e.IsSilent,
 			Reply:       msg.Reply,
@@ -42,12 +42,35 @@ func MessageNew(c Context, e event.MessageNew) error {
 			Text:        e.Text,
 			Forwards:    ForwardExtToCbkForwards(forwards, attachWaitingIDs),
 			Attachments: AttachmentToCbkAttachs(msg.Attachments, attachWaitingIDs),
+		})
+	}
+
+	var responses []callback.NewMsgResponse
+	if responses, err = c.CallbackApi().OnNewMsg(callbackNewMessages); err != nil {
+		return err
+	}
+
+	messageMaps := NewMsgResponseToMsgMap(responses)
+	if err = c.DB().
+		Table(model.TableMessagesMap).
+		Create(&messageMaps).Error; err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func NewMsgResponseToMsgMap(responses []callback.NewMsgResponse) []*model.MessageMap {
+	mm := make([]*model.MessageMap, len(responses))
+	for i, response := range responses {
+		mm[i] = &model.MessageMap{
+			AppID:      response.AppID,
+			MsgID:      response.MsgID,
+			MsgLocalID: response.LocalID,
 		}
 	}
 
-	c.CallbackApi().OnNewMsg(callbackMsgMap)
-
-	return nil
+	return mm
 }
 
 func ForwardExtToCbkForwards(exts []ForwardExt, attachWaitingIDs []int) []callback.NewForward {
@@ -100,7 +123,7 @@ func SaveMsg(c Context, e event.MessageNew) (model.MessageExt, []ForwardExt, err
 
 	var forwardsAttachments []*model.Attachment
 
-	fwdLocalIDs := event.CollectMessageNewForwardsLoclIDs(e.Forwards)
+	fwdLocalIDs := event.CollectMessageNewForwardsLocalIDs(e.Forwards)
 	var messagesMap []model.MessageMap
 	if err := c.DB().
 		Table(model.TableMessagesMap).

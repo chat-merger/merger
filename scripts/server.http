@@ -11,8 +11,10 @@ X-App-Id: 123
 Content-Type: application/json
 
 {
-  "id": 999,
-  "value": "content"
+  "localId": "lid_3",
+  "username": "username_3",
+  "isSilent": false,
+  "text": "some_text_3"
 }
 
 ### echo

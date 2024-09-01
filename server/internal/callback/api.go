@@ -8,23 +8,35 @@ import (
 )
 
 type API interface {
-	OnNewMsg(c map[int]NewMessage) NewMsgResponse
+	OnNewMsg(c []NewMessage) ([]NewMsgResponse, error)
 }
 
 type api struct {
 	cl *http.Client
 }
 
-func (a *api) OnNewMsg(c map[int]NewMessage) NewMsgResponse {
-	b, err := json.Marshal(c)
-	if err != nil {
-		fmt.Println(err.Error())
+func (a *api) OnNewMsg(newMessages []NewMessage) ([]NewMsgResponse, error) {
+	result := make([]NewMsgResponse, len(newMessages))
+	for i, newMsg := range newMessages {
+		b, err := json.Marshal(newMsg)
+		if err != nil {
+			return nil, fmt.Errorf("json.Marshal: %w ", err)
+		}
+		r, err := a.cl.Post(newMsg.App.Host, "application/json", bytes.NewBuffer(b))
+		if err != nil {
+			return nil, fmt.Errorf("a.cl.Post: %w", err)
+		}
+		var resp NewMsgResponse
+		if err = json.NewDecoder(r.Body).Decode(&resp); err != nil {
+			return nil, fmt.Errorf("json.NewDecoder.Decode: %w", err)
+		}
+		resp.MsgID = newMsg.ID
+		resp.AppID = newMsg.App.ID
+
+		result[i] = resp
 	}
-	_, err = a.cl.Post("http://localhost:43687/echo", "application/json", bytes.NewBuffer(b))
-	if err != nil {
-		fmt.Println(err.Error())
-	}
-	return NewMsgResponse{LocalID: "x"}
+
+	return result, nil
 }
 
 func NewAPI() API {
