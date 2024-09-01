@@ -7,6 +7,6 @@ import (
 )
 
 type Context interface {
-	CallbackApi() callback.API
+	CBClient() callback.Client
 	DB() *gorm.DB
 }

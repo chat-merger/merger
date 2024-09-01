@@ -2,15 +2,17 @@ package callback
 
 import (
 	"net/http"
+
+	"github.com/chat-merger/merger/server/internal/model"
 )
 
-type API interface {
-	OnMessageNew(c []MessageNew) ([]MessageNewResponse, error)
+type Client interface {
+	MessageNew(c []MessageNew) ([]*model.Bind, error)
 }
 
-func NewAPI() API { return &api{cl: http.DefaultClient} }
+func NewClient() Client { return &client{cl: http.DefaultClient} }
 
-type api struct {
+type client struct {
 	cl *http.Client
 }
 

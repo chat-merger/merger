@@ -47,16 +47,16 @@ type AttachmentNew struct {
 	WaitUpload bool   `json:"wait_upload,omitempty"` // false - ждать ивента о том что файл стал доступен по ссылке
 }
 
-func (a *api) OnMessageNew(newMessages []MessageNew) ([]MessageNewResponse, error) {
+func (c *client) MessageNew(newMessages []MessageNew) ([]*model.Bind, error) {
 	result := make([]MessageNewResponse, len(newMessages))
 	for i, newMsg := range newMessages {
 		b, err := json.Marshal(Body{MessageNew: &newMsg})
 		if err != nil {
 			return nil, fmt.Errorf("json.Marshal: %w ", err)
 		}
-		r, err := a.cl.Post(newMsg.App.Host, "application/json", bytes.NewBuffer(b))
+		r, err := c.cl.Post(newMsg.App.Host, "application/json", bytes.NewBuffer(b))
 		if err != nil {
-			return nil, fmt.Errorf("a.cl.Post: %w", err)
+			return nil, fmt.Errorf("c.cl.Post: %w", err)
 		}
 		var resp MessageNewResponse
 		if err = json.NewDecoder(r.Body).Decode(&resp); err != nil {
@@ -68,5 +68,18 @@ func (a *api) OnMessageNew(newMessages []MessageNew) ([]MessageNewResponse, erro
 		result[i] = resp
 	}
 
-	return result, nil
+	return NewMsgResponseToBinds(result), nil
+}
+
+func NewMsgResponseToBinds(responses []MessageNewResponse) []*model.Bind {
+	mm := make([]*model.Bind, len(responses))
+	for i, response := range responses {
+		mm[i] = &model.Bind{
+			AppID:      response.AppID,
+			MsgID:      response.MsgID,
+			MsgLocalID: response.LocalID,
+		}
+	}
+
+	return mm
 }

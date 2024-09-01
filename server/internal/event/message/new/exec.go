@@ -19,7 +19,7 @@ func Exec(c event.Context, e Message) error {
 		return err
 	}
 
-	var replyByAppID map[int]model.MessageMap
+	var replyByAppID map[int]model.Bind
 	if replyByAppID, err = AppIDToMsgMapByMsgID(c, msg.Reply); err != nil {
 		return err
 	}
@@ -29,9 +29,9 @@ func Exec(c event.Context, e Message) error {
 		return err
 	}
 
-	callbackNewMessages := make([]callback.MessageNew, 0, len(applications))
-	for _, app := range applications {
-		callbackNewMessages = append(callbackNewMessages, callback.MessageNew{
+	callbackNewMessages := make([]callback.MessageNew, len(applications))
+	for i, app := range applications {
+		callbackNewMessages[i] = callback.MessageNew{
 			App:         *app,
 			ID:          msg.ID,
 			IsSilent:    e.IsSilent,
@@ -41,18 +41,17 @@ func Exec(c event.Context, e Message) error {
 			Text:        e.Text,
 			Forwards:    ForwardExtToCbkForwards(forwards, attachWaitingIDs),
 			Attachments: AttachmentToCbkAttachs(msg.Attachments, attachWaitingIDs),
-		})
+		}
 	}
 
-	var responses []callback.MessageNewResponse
-	if responses, err = c.CallbackApi().OnMessageNew(callbackNewMessages); err != nil {
+	var newBinds []*model.Bind
+	if newBinds, err = c.CBClient().MessageNew(callbackNewMessages); err != nil {
 		return err
 	}
 
-	messageMaps := NewMsgResponseToMsgMap(responses)
 	if err = c.DB().
-		Table(model.TableMessagesMap).
-		Create(&messageMaps).Error; err != nil {
+		Table(model.TableBinds).
+		Create(&newBinds).Error; err != nil {
 		return err
 	}
 

@@ -28,8 +28,8 @@ const (
 
 func CollectAttachmentID(attachments []*Attachment) []int {
 	result := make([]int, len(attachments))
-	for i, fwd := range attachments {
-		result[i] = fwd.ID
+	for i, attachment := range attachments {
+		result[i] = attachment.ID
 	}
 
 	return result

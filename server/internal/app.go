@@ -17,13 +17,13 @@ import (
 )
 
 type App struct {
-	ConfigPath  string
-	cfg         *Config
-	callbackApi callback.API
-	db          *gorm.DB
+	ConfigPath string
+	cfg        *Config
+	cbClient   callback.Client
+	db         *gorm.DB
 }
 
-func (a *App) CallbackApi() callback.API { return a.callbackApi }
+func (a *App) CBClient() callback.Client { return a.cbClient }
 func (a *App) DB() *gorm.DB              { return a.db }
 
 type Config struct {
@@ -37,7 +37,7 @@ func (a *App) Start(c *cli.Context) (err error) {
 		return err
 	}
 
-	a.callbackApi = configureCallbackApi()
+	a.cbClient = configureCallbackApi()
 
 	var closeDB func() error
 	if a.db, closeDB, err = connectToDB(a.cfg.DbConnection); err != nil {
@@ -97,8 +97,8 @@ func connectToDB(dsn string) (*gorm.DB, func() error, error) {
 	return db, sqlDB.Close, nil
 }
 
-func configureCallbackApi() callback.API {
-	return callback.NewAPI()
+func configureCallbackApi() callback.Client {
+	return callback.NewClient()
 }
 
 func parseConfig(path string) (*Config, error) {

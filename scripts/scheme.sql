@@ -15,7 +15,7 @@ create table Messages
     reply integer null references Messages -- сообщение создано как "ответ" на ID другого сообщения
 );
 
-create table MessagesMap
+create table Binds
 (
     appId      integer not null references Applications,
     msgId      integer not null references Messages,

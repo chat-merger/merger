@@ -17,10 +17,10 @@ type ForwardExt struct {
 	Attachments []*model.Attachment
 }
 
-func NewMsgResponseToMsgMap(responses []callback.MessageNewResponse) []*model.MessageMap {
-	mm := make([]*model.MessageMap, len(responses))
+func NewMsgResponseToBinds(responses []callback.MessageNewResponse) []*model.Bind {
+	mm := make([]*model.Bind, len(responses))
 	for i, response := range responses {
-		mm[i] = &model.MessageMap{
+		mm[i] = &model.Bind{
 			AppID:      response.AppID,
 			MsgID:      response.MsgID,
 			MsgLocalID: response.LocalID,
@@ -53,7 +53,7 @@ func SaveMessage(c event.Context, e Message) (model.MessageExt, []ForwardExt, er
 		ID int `gorm:"column:msgId"`
 	}
 	if err := c.DB().
-		Model(model.InstMessageMap).
+		Model(model.InstBind).
 		Select("msgId").
 		Where("appId = ?", e.AppID).
 		Where("msgLocalId = ?", e.ReplyLocalID).
@@ -81,16 +81,16 @@ func SaveMessage(c event.Context, e Message) (model.MessageExt, []ForwardExt, er
 	var forwardsAttachments []*model.Attachment
 
 	fwdLocalIDs := CollectMessageNewForwardsLocalIDs(e.Forwards)
-	var messagesMap []model.MessageMap
+	var binds []model.Bind
 	if err := c.DB().
-		Table(model.TableMessagesMap).
+		Table(model.TableBinds).
 		Where("appId = ?", e.AppID).
 		Where("msgLocalId IN (?)", fwdLocalIDs).
-		Find(&messagesMap).Error; err != nil {
+		Find(&binds).Error; err != nil {
 		return model.MessageExt{}, nil, err
 	}
-	fwdLocalToID := make(map[string]int, len(messagesMap))
-	for _, pair := range messagesMap {
+	fwdLocalToID := make(map[string]int, len(binds))
+	for _, pair := range binds {
 		fwdLocalToID[pair.MsgLocalID] = pair.MsgID
 	}
 	forwards := make([]ForwardExt, len(e.Forwards))
@@ -139,7 +139,7 @@ func CollectForwardExtAttachIDs(exts []ForwardExt) []int {
 func AttachIDsInWaitingUpload(c event.Context, ids []int) ([]int, error) {
 	var waitingIDs []int
 	if err := c.DB().
-		Table(model.TableAttachments).
+		Table(model.TableFiles).
 		Joins("LEFT JOIN "+model.TableFiles+" ON Attachments.id = Files.attachmentId").
 		Where("Attachments.id IN (?)", ids).
 		Where("Files.id IS NULL").
@@ -157,22 +157,22 @@ func AttachmentToCbkAttachs(attachs []*model.Attachment, waitingIDs []int) []cal
 			HasSpoiler: attach.HasSpoiler,
 			Type:       attach.Type,
 			Url:        attach.Url,
-			WaitUpload: !slices.Contains(waitingIDs, attach.ID),
+			WaitUpload: attach.Url == "" && !slices.Contains(waitingIDs, attach.ID),
 		})
 	}
 
 	return newAttachments
 }
 
-func AppIDToMsgMapByMsgID(c event.Context, msgID int) (map[int]model.MessageMap, error) {
-	var msgMapSl []model.MessageMap
+func AppIDToMsgMapByMsgID(c event.Context, msgID int) (map[int]model.Bind, error) {
+	var msgMapSl []model.Bind
 	if err := c.DB().
 		Where("msgId = ?", msgID).
 		Find(&msgMapSl).Error; err != nil {
 		return nil, err
 	}
 
-	msgMap := make(map[int]model.MessageMap, len(msgMapSl))
+	msgMap := make(map[int]model.Bind, len(msgMapSl))
 	for _, e := range msgMapSl {
 		msgMap[e.AppID] = e
 	}
