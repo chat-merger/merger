@@ -26,6 +26,14 @@ type App struct {
 	redis       *redis.Client
 }
 
+func (a *App) CallbackApi() callback.API { return a.callbackApi }
+func (a *App) DB() *gorm.DB              { return a.db }
+
+//type Context interface {
+//	CallbackApi() callback.API
+//	DB() *gorm.DB
+//}
+
 type Config struct {
 	Port            int    `toml:"port"`
 	DbConnection    string `toml:"db"`
@@ -54,7 +62,7 @@ func (a *App) Start(c *cli.Context) (err error) {
 
 func startAndListenServer(app *App) error {
 	router := http.NewServeMux()
-	handlers.setup(router, app)
+	handlers.Setup(app, router)
 
 	serv := http.Server{
 		Addr:    fmt.Sprintf(":%d", app.cfg.Port),

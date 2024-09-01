@@ -2,33 +2,33 @@ pragma foreign_keys = ON;
 
 create table Applications
 (
-    id       integer primary key autoincrement,
-    name     text not null,
-    xkey     text not null,
-    callback text not null
+    id   integer primary key autoincrement,
+    name text not null,
+    xkey text not null,
+    host text not null
 );
 
 create table Messages
 (
-    id         integer primary key autoincrement,
-    isSilent   integer not null,                 -- bool, сообщение без уведомления
-    isForward  integer not null,                 -- bool, сообщение создано как "пересланное"
-    reply      integer null references Messages, -- сообщение создано как "ответ" на ID другого сообщения
-    username   text    not null,                 -- имя автора сообщения
-    text       text    not null,                 -- текст сообщения
-    createDate integer not null                  -- время создания сообщения в формате unix
+    id    integer primary key autoincrement,
+    appId integer not null references Applications,
+    reply integer null references Messages -- сообщение создано как "ответ" на ID другого сообщения
 );
 
 create table MessageMap
 (
-    msgId   integer not null references Messages,
-    inAppId text    not null
+    appId      integer not null references Applications,
+    msgId      integer not null references Messages,
+    msgLocalId text    not null
 );
 
 create table Attachments
 (
+    id         integer primary key autoincrement,
+    localId    text    not null,
+    appId      integer not null references Applications,
     msgId      integer not null references Messages,
-    fileId     integer not null references Files,
+    url        text    not null,
     hasSpoiler integer not null, -- bool
     type       integer not null
 );
