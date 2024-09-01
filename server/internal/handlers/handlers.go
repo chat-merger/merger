@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -23,6 +24,13 @@ func Setup(c Context, router *http.ServeMux) {
 	router.HandleFunc("GET /", wrap(c, handlerOk))
 	router.HandleFunc("POST /events/newMessage", wrap(c, handlerEventMessageNew))
 	router.HandleFunc("POST /files", wrap(c, handlerFileUpload))
+	router.HandleFunc("POST /echo", wrap(c, handlerEcho))
+}
+
+func handlerEcho(_ Context, r *http.Request) (any, error) {
+	var b, _ = io.ReadAll(r.Body)
+	fmt.Println(string(b))
+	return text("OK")
 }
 
 func handlerOk(_ Context, _ *http.Request) (any, error) {

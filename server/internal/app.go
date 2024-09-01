@@ -45,6 +45,8 @@ func (a *App) Start(c *cli.Context) (err error) {
 		return err
 	}
 
+	a.callbackApi = configureCallbackApi()
+
 	var closeDB func() error
 	if a.db, closeDB, err = connectToDB(a.cfg.DbConnection); err != nil {
 		return err
@@ -121,6 +123,10 @@ func connectToDB(dsn string) (*gorm.DB, func() error, error) {
 	}
 
 	return db, sqlDB.Close, nil
+}
+
+func configureCallbackApi() callback.API {
+	return callback.NewAPI()
 }
 
 func parseConfig(path string) (*Config, error) {

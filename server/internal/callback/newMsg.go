@@ -9,14 +9,14 @@ type NewMsgResponse struct {
 }
 
 type NewMessage struct {
-	ID          int
-	IsSilent    bool
-	Reply       int
-	ReplyLocal  string
-	Username    string
-	Text        string
-	Attachments []NewAttachment
-	Forwards    []NewForward
+	ID          int             `json:"ID,omitempty"`
+	IsSilent    bool            `json:"isSilent,omitempty"`
+	Reply       int             `json:"reply,omitempty"`
+	ReplyLocal  string          `json:"replyLocal,omitempty"`
+	Username    string          `json:"username,omitempty"`
+	Text        string          `json:"text,omitempty"`
+	Attachments []NewAttachment `json:"attachments,omitempty"`
+	Forwards    []NewForward    `json:"forwards,omitempty"`
 }
 
 type NewForward struct {
